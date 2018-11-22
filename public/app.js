@@ -139,12 +139,14 @@ app.bindForms = function () {
         // Turn the inputs into a payload
         const payload = {};
         const elements = this.elements;
+        //console.log(this.elements)
         for (let i = 0; i < elements.length; i++) {
           if (elements[i].type !== 'submit') {
             // Determine class of element and set value accordingly
             const classOfElement = typeof (elements[i].classList.value) == 'string' && elements[i].classList.value.length > 0 ? elements[i].classList.value : '';
-            const valueOfElement = elements[i].type == 'orderbox' && classOfElement.indexOf('multiselect') == -1 ? elements[i].ordered : classOfElement.indexOf('intval') == -1 ? elements[i].value : parseInt(elements[i].value);
+            const valueOfElement = elements[i].type == 'number' && classOfElement.indexOf('multiselect') == -1 ? parseInt(elements[i].value) : classOfElement.indexOf('intval') == -1 ? elements[i].value : parseInt(elements[i].value);
             const elementIsordered = elements[i].ordered;
+            console.log(valueOfElement, elementIsordered)
             // Override the method of the form if the input's name is _method
             const nameOfElement = elements[i].name;
             if (nameOfElement == '_method') {
@@ -404,9 +406,10 @@ app.loadOrdersListPage = function () {
     const queryStringObject = {
       'email': email
     };
+    console.log(email)
     app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
       if (statusCode == 200) {
-
+        console.log(statusCode, responsePayload)
         // Determine how many orders the user has
         const allorders = typeof (responsePayload.orders) == 'object' && responsePayload.orders instanceof Array && responsePayload.orders.length > 0 ? responsePayload.orders : [];
         if (allorders.length > 0) {
@@ -415,11 +418,13 @@ app.loadOrdersListPage = function () {
           allorders.forEach(function (orderId) {
             // Get the data for the order
             const newQueryStringObject = {
-              'id': orderId
+              'orderId': orderId
             };
-            app.client.request(undefined, 'api/shop', 'GET', newQueryStringObject, undefined, function (statusCode, responsePayload) {
+            console.log(orderId)
+            app.client.request(queryStringObject, 'api/shop', 'GET', newQueryStringObject, undefined, function (statusCode, responsePayload) {
               if (statusCode == 200) {
                 const orderData = responsePayload;
+                console.log(orderData);
                 // Make the order data into a table row
                 const table = document.getElementById("ordersListTable");
                 const tr = table.insertRow(-1);
@@ -428,13 +433,13 @@ app.loadOrdersListPage = function () {
                 const td1 = tr.insertCell(1);
                 const td2 = tr.insertCell(2);
                 const td3 = tr.insertCell(3);
-                const td4 = tr.insertCell(4);
-                td0.innerHTML = responsePayload.method.toUpperCase();
-                td1.innerHTML = responsePayload.protocol + '://';
-                td2.innerHTML = responsePayload.url;
-                const state = typeof (responsePayload.state) == 'string' ? responsePayload.state : 'unknown';
-                td3.innerHTML = state;
-                td4.innerHTML = '<a href="/orders/edit?id=' + responsePayload.id + '">View / Edit / Delete</a>';
+                //const td4 = tr.insertCell(4);
+                td0.innerHTML = responsePayload.grilled;
+                td1.innerHTML = responsePayload.cheese;
+                td2.innerHTML = responsePayload.macaroni;
+                // const state = typeof (responsePayload.state) == 'string' ? responsePayload.state : 'unknown';
+                // td3.innerHTML = state;
+                td3.innerHTML = '<a href="/orders/edit?id=' + responsePayload.id + '">View / Edit / Delete</a>';
               } else {
                 console.log("Error trying to load order ID: ", orderId);
               }
@@ -448,10 +453,10 @@ app.loadOrdersListPage = function () {
 
         } else {
           // Show 'you have no orders' message
-          document.getElementById("noordersMessage").style.display = 'table-row';
+          document.getElementById("noOrdersMessage").style.display = 'table-row';
 
           // Show the createorder CTA
-          document.getElementById("createorderCTA").style.display = 'block';
+          //document.getElementById("createorderCTA").style.display = 'block';
 
         }
       } else {
@@ -514,7 +519,7 @@ app.tokenRenewalLoop = function () {
         console.log("Token renewed successfully @ " + Date.now());
       }
     });
-  }, 1000 * 10);
+  }, 1000 * 60);
 };
 
 // Init (bootstrapping)

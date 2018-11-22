@@ -135,7 +135,7 @@ const unifiedServer = function (req, res) {
       res.writeHead(statusCode);
       res.end(payloadString);
 
-      console.log('The server is running with this response: ', statusCode)
+      console.log('The server is running with this response: ', statusCode + ' ' + trimmedName)
     })
 
   })
@@ -153,6 +153,7 @@ const router = {
   'orders/all' : routeHandlers.ordersList,
   'orders/create' : routeHandlers.ordersCreate,
   'orders/edit' : routeHandlers.ordersEdit,
+  'checkout/create' : routeHandlers.checkout,
   'api/users': routeHandlers.users,
   'api/tokens': routeHandlers.tokens,
   'api/menu': routeHandlers.menu,
