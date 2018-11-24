@@ -22,7 +22,7 @@ app.client.request = function (headers, path, method, queryStringObject, payload
   // For each query string parameter sent, add it to the path
   let requestUrl = path + '?';
   let counter = 0;
-  for (const queryKey in queryStringObject) {
+  for (let queryKey in queryStringObject) {
     if (queryStringObject.hasOwnProperty(queryKey)) {
       counter++;
       // If at least one query string parameter has already been added, preprend new ones with an ampersand
@@ -40,7 +40,7 @@ app.client.request = function (headers, path, method, queryStringObject, payload
   xhr.setRequestHeader("Content-type", "application/json");
 
   // For each header sent, add it to the request
-  for (const headerKey in headers) {
+  for (let headerKey in headers) {
     if (headers.hasOwnProperty(headerKey)) {
       xhr.setRequestHeader(headerKey, headers[headerKey]);
     }
@@ -123,9 +123,9 @@ app.bindForms = function () {
 
         // Stop it from submitting
         e.preventDefault();
-        const formId = this.id;
-        const path = this.action;
-        const method = this.method.toUpperCase();
+        let formId = this.id;
+        let path = this.action;
+        let method = this.method.toUpperCase();
 
         // Hide the error message (if it's currently shown due to a previous error)
         document.querySelector("#" + formId + " .formError").style.display = 'none';
@@ -136,40 +136,37 @@ app.bindForms = function () {
         }
 
         // Turn the inputs into a payload
-        const payload = {};
-        const elements = this.elements;
-        console.log(this.elements)
+        let payload = {};
+        let elements = this.elements;
         for (let i = 0; i < elements.length; i++) {
           if (elements[i].type !== 'submit') {
             // Determine class of element and set value accordingly
-            const classOfElement = typeof (elements[i].classList.value) == 'string' && elements[i].classList.value.length > 0 ? elements[i].classList.value : '';
-            const valueOfElement = elements[i].type == 'number' && classOfElement.indexOf('multiselect') == -1 ? parseInt(elements[i].value) : classOfElement.indexOf('intval') == -1 ? elements[i].value : parseInt(elements[i].value);
-            const elementIsordered = elements[i].ordered;
-            console.log(valueOfElement, elementIsordered)
+            let classOfElement = typeof (elements[i].classList.value) == 'string' && elements[i].classList.value.length > 0 ? elements[i].classList.value : '';
+            let valueOfElement = elements[i].type == 'number' && classOfElement.indexOf('multiselect') == -1 ? parseInt(elements[i].value) : classOfElement.indexOf('intval') == -1 ? elements[i].value : parseInt(elements[i].value);
             // Override the method of the form if the input's name is _method
-            const nameOfElement = elements[i].name;
+            let nameOfElement = elements[i].name;
+            console.log(nameOfElement, "names")
+            if (nameOfElement == '_method') {
+              method = valueOfElement;
+            } else {
+              if (nameOfElement == 'uid') {
+                nameOfElement = 'orderId';
+              }
               // If the element has the class "multiselect" add its value(s) as array elements
               if (classOfElement.indexOf('multiselect') > -1) {
-                if (elementIsordered) {
-                  payload[nameOfElement] = typeof (payload[nameOfElement]) == 'object' && payload[nameOfElement] instanceof Array ? payload[nameOfElement] : [];
-                  payload[nameOfElement].push(valueOfElement);
-                }
+                
               } else {
                 payload[nameOfElement] = valueOfElement;
               }
+            }
           }
         }
 
 
         // If the method is DELETE, the payload should be a queryStringObject instead
         const queryStringObject = method == 'DELETE' ? payload : {};
-        const currentToken = typeof (app.config.sessionToken) == 'object' ? app.config.sessionToken : false;
-        const headers = {
-          "token" : currentToken.id
-        }
-        console.log(currentToken, currentToken.id, headers, "all the info")
         // Call the API
-        app.client.request(currentToken.id, path, method, queryStringObject, payload, function (statusCode, responsePayload) {
+        app.client.request(undefined, path, method, queryStringObject, payload, function (statusCode, responsePayload) {
           // Display an error on the form if needed
           if (statusCode !== 200) {
 
@@ -204,7 +201,6 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
   const functionToCall = false;
   // If account creation was successful, try to immediately log the user in
   if (formId == 'accountCreate') {
-    console.log(responsePayload)
     // Take the email and password, and use it to log the user in
     const newPayload = {
       'email': requestPayload.email,
@@ -253,6 +249,11 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
 
   // If the user just deleted an order, take them to the view orders page
   if (formId == 'ordersEdit2') {
+    window.location = '/menu/all';
+  }
+
+  // If the user just edited an order, take them to the view orders page
+  if (formId == 'ordersEdit1') {
     window.location = '/orders/view';
   }
 
@@ -364,11 +365,6 @@ app.loadDataOnPage = function () {
   if (primaryClass == 'orderView') {
     app.loadOrdersView();
   }
-
-  // Logic for checkout page
-  // if (primaryClass == 'checkout') {
-  //   app.makePayment();
-  // }
 };
 
 // Load the account edit page specifically
@@ -385,6 +381,7 @@ app.loadAccountEditPage = function () {
         // Put the data into the forms as values where needed
         document.querySelector("#accountEdit1 .firstNameInput").value = responsePayload.firstName;
         document.querySelector("#accountEdit1 .lastNameInput").value = responsePayload.lastName;
+        document.querySelector("#accountEdit1 .addressInput").value = responsePayload.address;
         document.querySelector("#accountEdit1 .displayEmailInput").value = responsePayload.email;
 
         // Put the hidden email field into both forms
@@ -444,12 +441,10 @@ app.loadOrdersView = function () {
     const queryStringObject = {
       'email': email
     };
-    console.log(email)
     app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
       if (statusCode == 200) {
         const allorders = typeof (responsePayload.order) == 'object' && responsePayload.order instanceof Array && responsePayload.order.length > 0 ? responsePayload.order : [];
         if (allorders.length > 0) {
-          console.log(allorders)
           // Show each created order as a new row in the table
           allorders.forEach(function (orderId) {
             // Get the data for the order
@@ -458,9 +453,8 @@ app.loadOrdersView = function () {
             };
             app.client.request(undefined, 'api/shop', 'GET', newQueryStringObject, undefined, function (statusCode, responsePayload) {
               if (statusCode == 200) {
-                const arr = Object.entries(responsePayload)
+                const arr = Object.entries(responsePayload);
                 for (let [key, value] of arr) {
-                  console.log(`${key}, ${value}`);
                   const prop = document.getElementById("view");
                   const ul = document.createElement("ul");
                   const li = document.createElement("li");
@@ -484,66 +478,54 @@ app.loadOrdersView = function () {
   }
 }
 
-// app.makePayment = function () {
-//   const currentToken = typeof (app.config.sessionToken) == 'object' ? app.config.sessionToken : false;
-
-//   if (currentToken) {
-//     const headers = {
-//       "token": currentToken.id
-//     }
-
-//     app.client.request(headers, "api/checkout", 'POST', undefined, undefined, function(statusCode, responsePayload) {
-//       if (statusCode === 200) {
-
-//       } else {
-//         window.location = 'menu/all'
-//       }
-//     })
-//   } else {
-//     window.location = 'menu/all'
-//   }
-// }
-
 
 // Load the orders edit page specifically
 app.loadOrdersEditPage = function () {
   // Get the order id from the query string, if none is found then redirect back to dashboard
-  let id = typeof (window.location.href.split('=')[1]) == 'string' && window.location.href.split('=')[1].length > 0 ? window.location.href.split('=')[1] : false;
-  if (id) {
-    // Fetch the order data
-    const queryStringObject = {
-      'id': id
-    };
-    app.client.request(undefined, 'api/shop', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
-      if (statusCode == 200) {
-
-        // Put the hidden id field into both forms
-        const hiddenIdInputs = document.querySelectorAll("input.hiddenIdInput");
-        for (let i = 0; i < hiddenIdInputs.length; i++) {
-          hiddenIdInputs[i].value = responsePayload.id;
-        }
-
-        // Put the data into the top form as values where needed
-        document.querySelector("#ordersEdit1 .displayIdInput").value = responsePayload.id;
-        document.querySelector("#ordersEdit1 .displayStateInput").value = responsePayload.state;
-        document.querySelector("#ordersEdit1 .protocolInput").value = responsePayload.protocol;
-        document.querySelector("#ordersEdit1 .urlInput").value = responsePayload.url;
-        document.querySelector("#ordersEdit1 .methodInput").value = responsePayload.method;
-        document.querySelector("#ordersEdit1 .timeoutInput").value = responsePayload.timeoutSeconds;
-        const successCodeorderboxes = document.querySelectorAll("#ordersEdit1 input.successCodesInput");
-        for (let i = 0; i < successCodeorderboxes.length; i++) {
-          if (responsePayload.successCodes.indexOf(parseInt(successCodeorderboxes[i].value)) > -1) {
-            successCodeorderboxes[i].ordered = true;
-          }
-        }
-      } else {
-        // If the request comes back as something other than 200, redirect back to dashboard
-        window.location = '/menu/all';
-      }
-    });
-  } else {
-    window.location = '/menu/all';
+  //let orderId = typeof (window.location.href.split('=')[1]) == 'string' && window.location.href.split('=')[1].length > 0 ? window.location.href.split('=')[1] : false;
+  const email = typeof (app.config.sessionToken.email) == 'string' ? app.config.sessionToken.email : false;
+  const newQueryStringObject = {
+    "email": email
   }
+  app.client.request(undefined, "api/users", "GET", newQueryStringObject, undefined, function (statusCode, responsePayload) {
+    if (statusCode === 200) {
+      const orderId = responsePayload.order;
+      //console.log(orderId, "id");
+
+      // Fetch the order data
+      const queryStringObject = {
+        'orderId': orderId
+      };
+      app.client.request(undefined, "api/shop", "GET", queryStringObject, undefined, function (statusCode, newResponsePayload) {
+        //console.log(statusCode, newResponsePayload)
+        if (statusCode == 200) {
+          console.log(statusCode, newResponsePayload)
+          //console.log(Object.entries(newResponsePayload), "test")
+          // Put the hidden id field into both forms
+          let hiddenIdInputs = document.querySelectorAll("input.hiddenIdInput");
+          for (let i = 0; i < hiddenIdInputs.length; i++) {
+            hiddenIdInputs[i].value = orderId;
+          }
+          //console.log(newResponsePayload.grilled, "test")
+          // Put the data into the top form as values where needed
+          document.querySelector("#ordersEdit1 .displayIdInput").value = orderId;
+          document.querySelector("#ordersEdit1 .butternutInput").value = (newResponsePayload.butternut.slice(1)) / 5;
+          document.querySelector("#ordersEdit1 .chickenInput").value = (newResponsePayload.chicken.slice(1)) / 6;
+          document.querySelector("#ordersEdit1 .sweetInput").value = (newResponsePayload.sweet.slice(1)) / 7;
+          document.querySelector("#ordersEdit1 .macaroniInput").value = (newResponsePayload.macaroni.slice(1)) / 5;
+          document.querySelector("#ordersEdit1 .cheeseInput").value = (newResponsePayload.cheese.slice(1)) / 6;
+          document.querySelector("#ordersEdit1 .grilledInput").value = (newResponsePayload.grilled.slice(1)) / 8;
+
+        } else {
+          // If the request comes back as something other than 200, redirect back to dashboard
+          window.location = '/menu/all';
+        }
+      });
+
+    } else {
+      window.location = "menu/all"
+    }
+  })
 };
 
 // Loop to renew token often
