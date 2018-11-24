@@ -1,11 +1,11 @@
 <h1>Check Details</h1>
-<a class="backButton" href="/checks/all">Back</a>
+<a class="backButton" href="/orders/all">Back</a>
 <hr />
 
 <h2>Edit the check details</h2>
 
 <div class="formWrapper">
-  <form id="checksEdit1" action="/api/checks" method="PUT">
+  <form id="ordersEdit1" action="/api/orders" method="PUT">
     <input type="hidden" name="_method" value="PUT"/>
     <div class="formError"></div>
     <div class="formSuccess">Your Changes Have Been Saved</div>
@@ -80,7 +80,7 @@
 <hr />
 <h2>Delete The Check</h2>
 <div class="formWrapper">
-  <form id="checksEdit2" action="/api/checks" method="DELETE">
+  <form id="ordersEdit2" action="/api/orders" method="DELETE">
     <input type="hidden" name="_method" value="DELETE"/>
     <div class="formError"></div>
     <div class="warning">Warning: This action cannot be undone. Dont click this button on accident!</div>

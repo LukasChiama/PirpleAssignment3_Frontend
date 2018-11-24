@@ -135,11 +135,10 @@ app.bindForms = function () {
           document.querySelector("#" + formId + " .formSuccess").style.display = 'none';
         }
 
-
         // Turn the inputs into a payload
         const payload = {};
         const elements = this.elements;
-        //console.log(this.elements)
+        console.log(this.elements)
         for (let i = 0; i < elements.length; i++) {
           if (elements[i].type !== 'submit') {
             // Determine class of element and set value accordingly
@@ -149,17 +148,6 @@ app.bindForms = function () {
             console.log(valueOfElement, elementIsordered)
             // Override the method of the form if the input's name is _method
             const nameOfElement = elements[i].name;
-            if (nameOfElement == '_method') {
-              method = valueOfElement;
-            } else {
-              // Create an payload field named "method" if the elements name is actually httpmethod
-              if (nameOfElement == 'httpmethod') {
-                nameOfElement = 'method';
-              }
-              // Create an payload field named "id" if the elements name is actually uid
-              if (nameOfElement == 'uid') {
-                nameOfElement = 'id';
-              }
               // If the element has the class "multiselect" add its value(s) as array elements
               if (classOfElement.indexOf('multiselect') > -1) {
                 if (elementIsordered) {
@@ -169,17 +157,19 @@ app.bindForms = function () {
               } else {
                 payload[nameOfElement] = valueOfElement;
               }
-
-            }
           }
         }
 
 
         // If the method is DELETE, the payload should be a queryStringObject instead
         const queryStringObject = method == 'DELETE' ? payload : {};
-
+        const currentToken = typeof (app.config.sessionToken) == 'object' ? app.config.sessionToken : false;
+        const headers = {
+          "token" : currentToken.id
+        }
+        console.log(currentToken, currentToken.id, headers, "all the info")
         // Call the API
-        app.client.request(undefined, path, method, queryStringObject, payload, function (statusCode, responsePayload) {
+        app.client.request(currentToken.id, path, method, queryStringObject, payload, function (statusCode, responsePayload) {
           // Display an error on the form if needed
           if (statusCode !== 200) {
 
@@ -214,6 +204,7 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
   const functionToCall = false;
   // If account creation was successful, try to immediately log the user in
   if (formId == 'accountCreate') {
+    console.log(responsePayload)
     // Take the email and password, and use it to log the user in
     const newPayload = {
       'email': requestPayload.email,
@@ -233,14 +224,14 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
       } else {
         // If successful, set the token and redirect the user
         app.setSessionToken(newResponsePayload);
-        window.location = '/orders/all';
+        window.location = '/menu/all';
       }
     });
   }
   // If login was successful, set the token in localstorage and redirect the user
   if (formId == 'sessionCreate') {
     app.setSessionToken(responsePayload);
-    window.location = '/orders/all';
+    window.location = '/menu/all';
   }
 
   // If forms saved successfully and they have success messages, show them
@@ -255,14 +246,19 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
     window.location = '/account/deleted';
   }
 
-  // If the user just created a new order successfully, redirect back to the dashboard
+  // If the user just created a new order successfully, take them to the view orders page
   if (formId == 'ordersCreate') {
-    window.location = '/orders/all';
+    window.location = '/orders/view';
   }
 
-  // If the user just deleted a order, redirect them to the dashboard
+  // If the user just deleted an order, take them to the view orders page
   if (formId == 'ordersEdit2') {
-    window.location = '/orders/all';
+    window.location = '/orders/view';
+  }
+
+  //If the user just successfully made a payment for a pizza, shhow a success message
+  if (formId == 'checkout') {
+    window.location = '/payment/complete';
   }
 
 };
@@ -355,7 +351,7 @@ app.loadDataOnPage = function () {
   }
 
   // Logic for dashboard page
-  if (primaryClass == 'ordersList') {
+  if (primaryClass == 'menuList') {
     app.loadOrdersListPage();
   }
 
@@ -363,6 +359,16 @@ app.loadDataOnPage = function () {
   if (primaryClass == 'ordersEdit') {
     app.loadOrdersEditPage();
   }
+
+  // Logic for checkout page
+  if (primaryClass == 'orderView') {
+    app.loadOrdersView();
+  }
+
+  // Logic for checkout page
+  // if (primaryClass == 'checkout') {
+  //   app.makePayment();
+  // }
 };
 
 // Load the account edit page specifically
@@ -406,58 +412,18 @@ app.loadOrdersListPage = function () {
     const queryStringObject = {
       'email': email
     };
-    console.log(email)
-    app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
+    //console.log(email)
+    app.client.request(undefined, 'api/menu', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
       if (statusCode == 200) {
-        console.log(statusCode, responsePayload)
-        // Determine how many orders the user has
-        const allorders = typeof (responsePayload.orders) == 'object' && responsePayload.orders instanceof Array && responsePayload.orders.length > 0 ? responsePayload.orders : [];
-        if (allorders.length > 0) {
-
-          // Show each created order as a new row in the table
-          allorders.forEach(function (orderId) {
-            // Get the data for the order
-            const newQueryStringObject = {
-              'orderId': orderId
-            };
-            console.log(orderId)
-            app.client.request(queryStringObject, 'api/shop', 'GET', newQueryStringObject, undefined, function (statusCode, responsePayload) {
-              if (statusCode == 200) {
-                const orderData = responsePayload;
-                console.log(orderData);
-                // Make the order data into a table row
-                const table = document.getElementById("ordersListTable");
-                const tr = table.insertRow(-1);
-                tr.classList.add('orderRow');
-                const td0 = tr.insertCell(0);
-                const td1 = tr.insertCell(1);
-                const td2 = tr.insertCell(2);
-                const td3 = tr.insertCell(3);
-                //const td4 = tr.insertCell(4);
-                td0.innerHTML = responsePayload.grilled;
-                td1.innerHTML = responsePayload.cheese;
-                td2.innerHTML = responsePayload.macaroni;
-                // const state = typeof (responsePayload.state) == 'string' ? responsePayload.state : 'unknown';
-                // td3.innerHTML = state;
-                td3.innerHTML = '<a href="/orders/edit?id=' + responsePayload.id + '">View / Edit / Delete</a>';
-              } else {
-                console.log("Error trying to load order ID: ", orderId);
-              }
-            });
-          });
-
-          if (allorders.length < 5) {
-            // Show the createorder CTA
-            document.getElementById("createorderCTA").style.display = 'block';
-          }
-
-        } else {
-          // Show 'you have no orders' message
-          document.getElementById("noOrdersMessage").style.display = 'table-row';
-
-          // Show the createorder CTA
-          //document.getElementById("createorderCTA").style.display = 'block';
-
+        const arr = Object.entries(responsePayload);
+        for (let [key, value] of arr) {
+          const prop = document.getElementById("menuList");
+          const ul = document.createElement("ul");
+          const li = document.createElement("li");
+          li.setAttribute("class", "available");
+          li.innerHTML = `${key}: ${value}`;
+          prop.appendChild(ul);
+          ul.appendChild(li);
         }
       } else {
         // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
@@ -468,6 +434,75 @@ app.loadOrdersListPage = function () {
     app.logUserOut();
   }
 };
+
+
+app.loadOrdersView = function () {
+  // Get the email number from the current token, or log the user out if none is there
+  const email = typeof (app.config.sessionToken.email) == 'string' ? app.config.sessionToken.email : false;
+  if (email) {
+    // Fetch the user data
+    const queryStringObject = {
+      'email': email
+    };
+    console.log(email)
+    app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
+      if (statusCode == 200) {
+        const allorders = typeof (responsePayload.order) == 'object' && responsePayload.order instanceof Array && responsePayload.order.length > 0 ? responsePayload.order : [];
+        if (allorders.length > 0) {
+          console.log(allorders)
+          // Show each created order as a new row in the table
+          allorders.forEach(function (orderId) {
+            // Get the data for the order
+            const newQueryStringObject = {
+              'orderId': orderId
+            };
+            app.client.request(undefined, 'api/shop', 'GET', newQueryStringObject, undefined, function (statusCode, responsePayload) {
+              if (statusCode == 200) {
+                const arr = Object.entries(responsePayload)
+                for (let [key, value] of arr) {
+                  console.log(`${key}, ${value}`);
+                  const prop = document.getElementById("view");
+                  const ul = document.createElement("ul");
+                  const li = document.createElement("li");
+                  li.setAttribute("class", "views");
+                  li.innerHTML = `${key}: ${value}`;
+                  prop.appendChild(ul);
+                  ul.appendChild(li);
+                }
+              } else {
+                //Redirect to dashboard if request isn't successful
+                window.location = '/menu/all';
+              }
+            });
+
+          });
+        }
+      } else {
+        app.logUserOut();
+      }
+    });
+  }
+}
+
+// app.makePayment = function () {
+//   const currentToken = typeof (app.config.sessionToken) == 'object' ? app.config.sessionToken : false;
+
+//   if (currentToken) {
+//     const headers = {
+//       "token": currentToken.id
+//     }
+
+//     app.client.request(headers, "api/checkout", 'POST', undefined, undefined, function(statusCode, responsePayload) {
+//       if (statusCode === 200) {
+
+//       } else {
+//         window.location = 'menu/all'
+//       }
+//     })
+//   } else {
+//     window.location = 'menu/all'
+//   }
+// }
 
 
 // Load the orders edit page specifically
@@ -503,11 +538,11 @@ app.loadOrdersEditPage = function () {
         }
       } else {
         // If the request comes back as something other than 200, redirect back to dashboard
-        window.location = '/orders/all';
+        window.location = '/menu/all';
       }
     });
   } else {
-    window.location = '/orders/all';
+    window.location = '/menu/all';
   }
 };
 
