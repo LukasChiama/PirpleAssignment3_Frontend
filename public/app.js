@@ -145,7 +145,6 @@ app.bindForms = function () {
             let valueOfElement = elements[i].type == 'number' && classOfElement.indexOf('multiselect') == -1 ? parseInt(elements[i].value) : classOfElement.indexOf('intval') == -1 ? elements[i].value : parseInt(elements[i].value);
             // Override the method of the form if the input's name is _method
             let nameOfElement = elements[i].name;
-            console.log(nameOfElement, "names")
             if (nameOfElement == '_method') {
               method = valueOfElement;
             } else {
@@ -154,7 +153,7 @@ app.bindForms = function () {
               }
               // If the element has the class "multiselect" add its value(s) as array elements
               if (classOfElement.indexOf('multiselect') > -1) {
-                
+
               } else {
                 payload[nameOfElement] = valueOfElement;
               }
@@ -353,7 +352,7 @@ app.loadDataOnPage = function () {
 
   // Logic for dashboard page
   if (primaryClass == 'menuList') {
-    app.loadOrdersListPage();
+    app.loadMenuListPage();
   }
 
   // Logic for order details page
@@ -401,7 +400,7 @@ app.loadAccountEditPage = function () {
 };
 
 // Load the dashboard page specifically
-app.loadOrdersListPage = function () {
+app.loadMenuListPage = function () {
   // Get the email number from the current token, or log the user out if none is there
   const email = typeof (app.config.sessionToken.email) == 'string' ? app.config.sessionToken.email : false;
   if (email) {
@@ -409,17 +408,17 @@ app.loadOrdersListPage = function () {
     const queryStringObject = {
       'email': email
     };
-    //console.log(email)
+    //fetch the available menu items, loop through them and show them on the page
     app.client.request(undefined, 'api/menu', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
       if (statusCode == 200) {
         const arr = Object.entries(responsePayload);
+        const prop = document.getElementById("menuList");
+        const ul = document.createElement("ul");
+        prop.appendChild(ul);
         for (let [key, value] of arr) {
-          const prop = document.getElementById("menuList");
-          const ul = document.createElement("ul");
           const li = document.createElement("li");
           li.setAttribute("class", "available");
           li.innerHTML = `${key}: ${value}`;
-          prop.appendChild(ul);
           ul.appendChild(li);
         }
       } else {
@@ -451,16 +450,21 @@ app.loadOrdersView = function () {
             const newQueryStringObject = {
               'orderId': orderId
             };
+            //fetch the order, loop through and display on the page
             app.client.request(undefined, 'api/shop', 'GET', newQueryStringObject, undefined, function (statusCode, responsePayload) {
               if (statusCode == 200) {
+                //if user has orders, display message
+                document.getElementById("orderDisplay").style.display = 'block';
+                document.getElementById("noOrderDisplay").style.display = 'none';
+
                 const arr = Object.entries(responsePayload);
+                const prop = document.getElementById("view");
+                const ul = document.createElement("ul");
+                prop.appendChild(ul);
                 for (let [key, value] of arr) {
-                  const prop = document.getElementById("view");
-                  const ul = document.createElement("ul");
                   const li = document.createElement("li");
                   li.setAttribute("class", "views");
                   li.innerHTML = `${key}: ${value}`;
-                  prop.appendChild(ul);
                   ul.appendChild(li);
                 }
               } else {
@@ -470,6 +474,10 @@ app.loadOrdersView = function () {
             });
 
           });
+        } else {
+          //if user has no order then dipslay saying so
+          document.getElementById("noOrderDisplay").style.display = 'block';
+          document.getElementById("orderDisplay").style.display = 'none';
         }
       } else {
         app.logUserOut();
@@ -481,8 +489,6 @@ app.loadOrdersView = function () {
 
 // Load the orders edit page specifically
 app.loadOrdersEditPage = function () {
-  // Get the order id from the query string, if none is found then redirect back to dashboard
-  //let orderId = typeof (window.location.href.split('=')[1]) == 'string' && window.location.href.split('=')[1].length > 0 ? window.location.href.split('=')[1] : false;
   const email = typeof (app.config.sessionToken.email) == 'string' ? app.config.sessionToken.email : false;
   const newQueryStringObject = {
     "email": email
@@ -490,23 +496,19 @@ app.loadOrdersEditPage = function () {
   app.client.request(undefined, "api/users", "GET", newQueryStringObject, undefined, function (statusCode, responsePayload) {
     if (statusCode === 200) {
       const orderId = responsePayload.order;
-      //console.log(orderId, "id");
 
       // Fetch the order data
       const queryStringObject = {
         'orderId': orderId
       };
       app.client.request(undefined, "api/shop", "GET", queryStringObject, undefined, function (statusCode, newResponsePayload) {
-        //console.log(statusCode, newResponsePayload)
         if (statusCode == 200) {
           console.log(statusCode, newResponsePayload)
-          //console.log(Object.entries(newResponsePayload), "test")
           // Put the hidden id field into both forms
           let hiddenIdInputs = document.querySelectorAll("input.hiddenIdInput");
           for (let i = 0; i < hiddenIdInputs.length; i++) {
             hiddenIdInputs[i].value = orderId;
           }
-          //console.log(newResponsePayload.grilled, "test")
           // Put the data into the top form as values where needed
           document.querySelector("#ordersEdit1 .displayIdInput").value = orderId;
           document.querySelector("#ordersEdit1 .butternutInput").value = (newResponsePayload.butternut.slice(1)) / 5;

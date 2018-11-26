@@ -207,12 +207,6 @@ input,select,option {
   width: 100%;
 }
 
-.checkboxGroup input{
-  display: inline-block;
-  width: initial;
-  margin: 20px;
-}
-
 input.disabled{
   background-color: #efefef;
 }
@@ -239,49 +233,16 @@ input.disabled{
   cursor: pointer;
 }
 
-table{
-  width: 100%;
-}
-
-tr{
-  width: 100%;
-}
-
-th{
-  text-transform: uppercase;
-  font-weight: bold;
-  padding: 10px;
-  border-color: #000;
-  border-style: dotted;
-  padding: 10px;
-  margin: 0 0 10px 0;
-  background-color: #efefef;
-}
-
-td{
+.available {
+  text-align: left;
+  margin: 10px;
   padding: 5px;
+  font-size: 12px;
 }
 
-td a, td a:hover, td a:active{
-  color: #2e5fa8;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* Page specific styles for dashboard */
-
-#noChecksMessage td{
-  text-align: center;
-  font-style: italic;
-  font-size: 20px;
-  padding: 20px;
-}
-
-#noChecksMessage{
-  display: none;
-}
-
-#createCheckCTA{
-  margin-top: 40px;
-  display: none;
+.views {
+  margin: 15px;
+  padding: 5px;
+  font-size: 13px;
+  font-weight: bold;
 }
