@@ -246,7 +246,7 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
     window.location = '/orders/view';
   }
 
-  // If the user just deleted an order, take them to the view orders page
+  // If the user just deleted an order, take them to the dashboard
   if (formId == 'ordersEdit2') {
     window.location = '/menu/all';
   }
@@ -364,7 +364,40 @@ app.loadDataOnPage = function () {
   if (primaryClass == 'orderView') {
     app.loadOrdersView();
   }
+
+  //Logic for create order page
+  if (primaryClass == 'ordersCreate') {
+    app.loadOrdersCreate()
+  }
 };
+
+//Load the order create page
+app.loadOrdersCreate = function () {
+  // Get the email number from the current token, or log the user out if none is there
+  const email = typeof (app.config.sessionToken.email) == 'string' ? app.config.sessionToken.email : false;
+  if (email) {
+    // Fetch the user data
+    const queryStringObject = {
+      'email': email
+    };
+    //fetch the available menu items, loop through them and show them on the page
+    app.client.request(undefined, 'api/menu', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
+      if (statusCode == 200) {
+        if (responsePayload["Butternut squash pizza"] == undefined) {
+          let disabledInput = document.querySelectorAll(".breakfastMenu");
+          for (let i = 0; i < disabledInput.length; i++) {
+            disabledInput[i].disabled = true
+          }
+        } else {
+          let disabledInput = document.querySelectorAll(".dinnerMenu");
+          for (let i = 0; i < disabledInput.length; i++) {
+            disabledInput[i].disabled = true
+          }
+        }
+      }
+    })
+  }
+}
 
 // Load the account edit page specifically
 app.loadAccountEditPage = function () {
@@ -421,6 +454,20 @@ app.loadMenuListPage = function () {
           li.innerHTML = `${key}: ${value}`;
           ul.appendChild(li);
         }
+        //If the user already has an order that hasn't been paid for, don't allow a new request
+        app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
+          if (statusCode == 200) {
+            const allorders = typeof (responsePayload.order) == 'object' && responsePayload.order instanceof Array && responsePayload.order.length > 0 ? responsePayload.order : [];
+            if (allorders.length > 0) {
+              //if user has an order then hide create order button
+              document.getElementById("orderExists").style.display = 'none';
+              document.getElementById("displayOrderMsg").style.display = 'block';
+            } else {
+              document.getElementById("displayOrderMsg").style.display = 'none';
+            }
+          }
+        })
+
       } else {
         // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
         app.logUserOut();
@@ -460,12 +507,13 @@ app.loadOrdersView = function () {
                 const arr = Object.entries(responsePayload);
                 const prop = document.getElementById("view");
                 const ul = document.createElement("ul");
+                ul.setAttribute("class", "attach");
                 prop.appendChild(ul);
                 for (let [key, value] of arr) {
-                  const li = document.createElement("li");
-                  li.setAttribute("class", "views");
-                  li.innerHTML = `${key}: ${value}`;
-                  ul.appendChild(li);
+                  const p = document.createElement("p");
+                  p.setAttribute("class", "views");
+                  p.innerHTML = `${key}: ${value}`;
+                  ul.appendChild(p);
                 }
               } else {
                 //Redirect to dashboard if request isn't successful
@@ -502,10 +550,10 @@ app.loadOrdersEditPage = function () {
         'orderId': orderId
       };
       app.client.request(undefined, "api/shop", "GET", queryStringObject, undefined, function (statusCode, newResponsePayload) {
-        if (statusCode == 200) {
+        if (statusCode === 200) {
           console.log(statusCode, newResponsePayload)
           // Put the hidden id field into both forms
-          let hiddenIdInputs = document.querySelectorAll("input.hiddenIdInput");
+          let hiddenIdInputs = document.querySelectorAll(".hiddenIdInput");
           for (let i = 0; i < hiddenIdInputs.length; i++) {
             hiddenIdInputs[i].value = orderId;
           }
